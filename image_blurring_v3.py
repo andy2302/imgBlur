@@ -14,6 +14,7 @@ class ImageBlur(QWidget):
 
         # Set up the GUI
         self.setWindowTitle('Image Blur')
+        self.setFixedSize(1675, 920)
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
         self.blur_slider = QSlider(Qt.Horizontal)

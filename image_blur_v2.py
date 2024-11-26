@@ -90,6 +90,19 @@ class ImageFilterApp(QMainWindow):
         undo_button.clicked.connect(self.undo_last)
         menu_layout.addWidget(undo_button)
 
+        # Reset Button
+        reset_button = QPushButton("Reset")
+        reset_button.clicked.connect(self.reset_image)
+        menu_layout.addWidget(reset_button)
+
+        # Exit Button
+        exit_button = QPushButton("Exit")
+        exit_button.clicked.connect(self.close)
+        menu_layout.addWidget(exit_button)
+
+        # Add spacer to push buttons to the bottom
+        menu_layout.addStretch()
+
         # Image display area
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
@@ -103,6 +116,31 @@ class ImageFilterApp(QMainWindow):
         self.animation = QPropertyAnimation(self.menu_widget, b"minimumWidth")
         self.animation.setDuration(300)
         self.menu_open = False
+
+    def reset_image(self):
+        # Clear all image-related variables
+        self.image = None
+        self.original_image = None
+        self.checkpoints = []
+
+        # Reset active filters
+        self.active_filters = {
+            'gaussian': False,
+            'median': False,
+            'bilateral': False,
+            'box': False
+        }
+
+        # Reset filter buttons to unchecked state
+        for button in [self.gaussian_button, self.median_button, self.bilateral_button, self.box_button]:
+            button.setChecked(False)
+
+        # Reset slider to default value
+        self.blur_slider.setValue(5)
+
+        # Clear the image display
+        self.image_label.clear()
+        self.image_label.setText("No image loaded")
 
     def toggle_menu(self):
         if self.menu_open:

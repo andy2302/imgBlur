@@ -45,6 +45,21 @@ class ImageFilterApp(QMainWindow):
         toggle_button_frame = QFrame()
         toggle_button_layout = QVBoxLayout()
         toggle_button_layout.addWidget(self.toggle_button)
+
+        toggle_button_layout.addStretch()
+
+        # Reset button
+        reset_button = QPushButton("Reset")
+        reset_button.clicked.connect(self.reset_image)
+        reset_button.setFixedSize(60, 30)
+        toggle_button_layout.addWidget(reset_button)
+
+        # Exit button
+        exit_button = QPushButton("Exit")
+        exit_button.clicked.connect(self.close)
+        exit_button.setFixedSize(60, 30)
+        toggle_button_layout.addWidget(exit_button)
+
         toggle_button_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         toggle_button_frame.setLayout(toggle_button_layout)
 
@@ -61,6 +76,24 @@ class ImageFilterApp(QMainWindow):
         load_image_button.clicked.connect(self.load_image)
         menu_layout.addWidget(load_image_button)
 
+        # Category Buttons
+        blurs_button = QPushButton("Blurs")
+        adjustments_button = QPushButton("Adjustments")
+
+        # Add buttons to menu layout
+        menu_layout.addWidget(blurs_button)
+        menu_layout.addWidget(adjustments_button)
+
+        # Submenu for Blurs
+        self.blurs_menu = QFrame()
+        self.blurs_menu.setStyleSheet("background-color: #555; color: white;")
+        self.blurs_menu.setFixedWidth(0)  # Start hidden
+        self.blurs_animation = QPropertyAnimation(self.blurs_menu, b"minimumWidth")
+        self.blurs_animation.setDuration(300)
+
+        blurs_menu_layout = QVBoxLayout()
+        self.blurs_menu.setLayout(blurs_menu_layout)
+
         # Filter buttons
         self.gaussian_button = QPushButton("Gaussian Blur")
         self.median_button = QPushButton("Median Blur")
@@ -73,9 +106,9 @@ class ImageFilterApp(QMainWindow):
         self.bilateral_button.clicked.connect(lambda: self.toggle_filter('bilateral', self.bilateral_button))
         self.box_button.clicked.connect(lambda: self.toggle_filter('box', self.box_button))
 
-        # Add buttons to layout
+        # Add buttons to submenu layout
         for btn in (self.gaussian_button, self.median_button, self.bilateral_button, self.box_button):
-            menu_layout.addWidget(btn)
+            blurs_menu_layout.addWidget(btn)
             btn.setCheckable(True)
 
         # Slider for filter intensity
@@ -83,39 +116,40 @@ class ImageFilterApp(QMainWindow):
         self.blur_slider.setRange(1, 20)
         self.blur_slider.setValue(5)
         self.blur_slider.valueChanged.connect(self.apply_active_filters)
-        menu_layout.addWidget(self.blur_slider)
+        blurs_menu_layout.addWidget(self.blur_slider)
 
-        # Undo Button
+        # Toggle blurs submenu visibility
+        blurs_button.clicked.connect(self.toggle_blurs_menu)
+
+        # Add Undo button under Adjustments category
         undo_button = QPushButton("Undo")
         undo_button.clicked.connect(self.undo_last)
         menu_layout.addWidget(undo_button)
 
-        # Reset Button
-        reset_button = QPushButton("Reset")
-        reset_button.clicked.connect(self.reset_image)
-        menu_layout.addWidget(reset_button)
-
-        # Exit Button
-        exit_button = QPushButton("Exit")
-        exit_button.clicked.connect(self.close)
-        menu_layout.addWidget(exit_button)
-
-        # Add spacer to push buttons to the bottom
-        menu_layout.addStretch()
+        # Add both menus to the main layout
+        main_layout.addWidget(toggle_button_frame)
+        main_layout.addWidget(self.menu_widget)
+        main_layout.addWidget(self.blurs_menu)
 
         # Image display area
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet("background-color: #222;")
-
-        main_layout.addWidget(toggle_button_frame)
-        main_layout.addWidget(self.menu_widget)
         main_layout.addWidget(self.image_label, 1)
 
         # Initialize animation for menu
         self.animation = QPropertyAnimation(self.menu_widget, b"minimumWidth")
         self.animation.setDuration(300)
         self.menu_open = False
+
+    def toggle_blurs_menu(self):
+        if self.blurs_menu.width() > 0:
+            self.blurs_animation.setStartValue(200)
+            self.blurs_animation.setEndValue(0)
+        else:
+            self.blurs_animation.setStartValue(0)
+            self.blurs_animation.setEndValue(200)
+        self.blurs_animation.start()
 
     def reset_image(self):
         # Clear all image-related variables

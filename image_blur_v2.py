@@ -10,6 +10,8 @@ from PySide6.QtGui import QPixmap, QImage
 
 # Import the filters
 from effects.filters import apply_gaussian_blur, apply_median_blur, apply_bilateral_blur, apply_box_blur
+from effects.adjustments import adjust_temperature, adjust_tint, adjust_saturation, adjust_sharpness, adjust_contrast, \
+    adjust_clarity, adjust_highlights, adjust_shadows, adjust_exposure, reduce_moire, reduce_noise, defringe
 
 
 class ImageFilterApp(QMainWindow):
@@ -29,6 +31,12 @@ class ImageFilterApp(QMainWindow):
             'bilateral': False,
             'box': False
         }
+
+        self.active_filters.update({
+            'temperature': False, 'tint': False, 'exposure': False, 'contrast': False,
+            'highlights': False, 'shadows': False, 'clarity': False, 'saturation': False,
+            'sharpness': False, 'noise': False, 'moire': False, 'defringe': False
+        })
 
         # Main layout
         main_layout = QHBoxLayout()
@@ -121,6 +129,56 @@ class ImageFilterApp(QMainWindow):
         # Toggle blurs submenu visibility
         blurs_button.clicked.connect(self.toggle_blurs_menu)
 
+        # Submenu for Adjustments
+        self.adjustments_menu = QFrame()
+        self.adjustments_menu.setStyleSheet("background-color: #555; color: white;")
+        self.adjustments_menu.setFixedWidth(0)  # Start hidden
+        self.adjustments_animation = QPropertyAnimation(self.adjustments_menu, b"minimumWidth")
+        self.adjustments_animation.setDuration(300)
+
+        adjustments_menu_layout = QVBoxLayout()
+        self.adjustments_menu.setLayout(adjustments_menu_layout)
+
+        # Adjustments Sliders
+        self.adjustments_sliders = {}
+
+        # Define adjustment parameters
+        adjustments = [
+            ("Temperature", -100, 100, 0),
+            ("Tint", -100, 100, 0),
+            ("Exposure", -100, 100, 0),
+            ("Contrast", -100, 100, 0),
+            ("Highlights", -100, 100, 0),
+            ("Shadows", -100, 100, 0),
+            ("Clarity", -100, 100, 0),
+            ("Saturation", -100, 100, 0),
+            ("Sharpness", -100, 100, 0),
+            ("Noise", 0, 100, 0),
+            ("Moire", 0, 1, 0),  # Treat moire as a toggle (0 or 1)
+            ("Defringe", 0, 100, 0),
+        ]
+
+        # Add sliders for each adjustment
+        for name, min_val, max_val, default in adjustments:
+            label = QLabel(name)
+            adjustments_menu_layout.addWidget(label)
+
+            slider = QSlider(Qt.Horizontal)
+            slider.setRange(min_val, max_val)
+            slider.setValue(default)
+            slider.valueChanged.connect(lambda value, n=name: self.update_adjustment(n, value))
+            adjustments_menu_layout.addWidget(slider)
+
+            # Label to show current value
+            value_label = QLabel(f"{default}")
+            adjustments_menu_layout.addWidget(value_label)
+
+            # Store the slider and value label in a dictionary
+            self.adjustments_sliders[name] = (slider, value_label)
+
+        # Connect adjustments menu toggle
+        adjustments_button.clicked.connect(self.toggle_adjustments_menu)
+
         # Add Undo button under Adjustments category
         undo_button = QPushButton("Undo")
         undo_button.clicked.connect(self.undo_last)
@@ -130,6 +188,7 @@ class ImageFilterApp(QMainWindow):
         main_layout.addWidget(toggle_button_frame)
         main_layout.addWidget(self.menu_widget)
         main_layout.addWidget(self.blurs_menu)
+        main_layout.addWidget(self.adjustments_menu)
 
         # Image display area
         self.image_label = QLabel()
@@ -150,6 +209,15 @@ class ImageFilterApp(QMainWindow):
             self.blurs_animation.setStartValue(0)
             self.blurs_animation.setEndValue(200)
         self.blurs_animation.start()
+
+    def toggle_adjustments_menu(self):
+        if self.adjustments_menu.width() > 0:
+            self.adjustments_animation.setStartValue(self.adjustments_menu.width())
+            self.adjustments_animation.setEndValue(0)
+        else:
+            self.adjustments_animation.setStartValue(self.adjustments_menu.width())
+            self.adjustments_animation.setEndValue(200)  # Adjust this value based on the desired width
+        self.adjustments_animation.start()
 
     def reset_image(self):
         # Clear all image-related variables
@@ -224,9 +292,43 @@ class ImageFilterApp(QMainWindow):
             if self.active_filters['box']:
                 current_image = apply_box_blur(current_image, intensity)
 
+            # Apply active filters in sequence
+            for adjustment, (slider, _) in self.adjustments_sliders.items():
+                value = slider.value()
+                if adjustment == "Temperature":
+                    current_image = adjust_temperature(current_image, value)
+                elif adjustment == "Tint":
+                    current_image = adjust_tint(current_image, value)
+                elif adjustment == "Exposure":
+                    current_image = adjust_exposure(current_image, value)
+                elif adjustment == "Contrast":
+                    current_image = adjust_contrast(current_image, value)
+                elif adjustment == "Highlights":
+                    current_image = adjust_highlights(current_image, value)
+                elif adjustment == "Shadows":
+                    current_image = adjust_shadows(current_image, value)
+                elif adjustment == "Clarity":
+                    current_image = adjust_clarity(current_image, value)
+                elif adjustment == "Saturation":
+                    current_image = adjust_saturation(current_image, value)
+                elif adjustment == "Sharpness":
+                    current_image = adjust_sharpness(current_image, value)
+                elif adjustment == "Noise":
+                    current_image = reduce_noise(current_image, value)
+                elif adjustment == "Moire" and value > 0:  # Only apply if the slider is > 0
+                    current_image = reduce_moire(current_image)
+                elif adjustment == "Defringe":
+                    current_image = defringe(current_image, value)
+
             self.image = current_image
             self.checkpoints.append(current_image.copy())
             self.show_image(current_image)
+
+    def update_adjustment(self, adjustment, value):
+        """Update the adjustment slider and reapply filters."""
+        slider, value_label = self.adjustments_sliders[adjustment]
+        value_label.setText(f"{value}")  # Update the displayed value
+        self.apply_active_filters()  # Reapply filters
 
     def undo_last(self):
         if len(self.checkpoints) > 1:

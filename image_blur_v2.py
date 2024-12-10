@@ -18,6 +18,8 @@ class ImageFilterApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        print("Initializing application...")
+
         self.setWindowTitle("Image Filter App")
         self.setGeometry(100, 100, 800, 600)
 
@@ -37,6 +39,21 @@ class ImageFilterApp(QMainWindow):
             'highlights': False, 'shadows': False, 'clarity': False, 'saturation': False,
             'sharpness': False, 'noise': False, 'moire': False, 'defringe': False
         })
+
+        self.previous_adjustments = {  # Initialize with None to detect the first change
+            "Temperature": None,
+            "Tint": None,
+            "Exposure": None,
+            "Contrast": None,
+            "Highlights": None,
+            "Shadows": None,
+            "Clarity": None,
+            "Saturation": None,
+            "Sharpness": None,
+            "Noise": None,
+            "Moire": None,
+            "Defringe": None
+        }
 
         # Main layout
         main_layout = QHBoxLayout()
@@ -202,139 +219,187 @@ class ImageFilterApp(QMainWindow):
         self.menu_open = False
 
     def toggle_blurs_menu(self):
-        if self.blurs_menu.width() > 0:
-            self.blurs_animation.setStartValue(200)
-            self.blurs_animation.setEndValue(0)
-        else:
-            self.blurs_animation.setStartValue(0)
-            self.blurs_animation.setEndValue(200)
-        self.blurs_animation.start()
+        try:
+            print("Toggling blurs menu...")
+            if self.blurs_menu.width() > 0:
+                self.blurs_animation.setStartValue(200)
+                self.blurs_animation.setEndValue(0)
+            else:
+                self.blurs_animation.setStartValue(0)
+                self.blurs_animation.setEndValue(200)
+            self.blurs_animation.start()
+        except Exception as e:
+            print(f"Error toggling blurs menu: {e}")
 
     def toggle_adjustments_menu(self):
-        if self.adjustments_menu.width() > 0:
-            self.adjustments_animation.setStartValue(self.adjustments_menu.width())
-            self.adjustments_animation.setEndValue(0)
-        else:
-            self.adjustments_animation.setStartValue(self.adjustments_menu.width())
-            self.adjustments_animation.setEndValue(200)  # Adjust this value based on the desired width
-        self.adjustments_animation.start()
+        try:
+            print("Toggling adjustments menu...")
+            if self.adjustments_menu.width() > 0:
+                self.adjustments_animation.setStartValue(self.adjustments_menu.width())
+                self.adjustments_animation.setEndValue(0)
+            else:
+                self.adjustments_animation.setStartValue(self.adjustments_menu.width())
+                self.adjustments_animation.setEndValue(200)  # Adjust this value based on the desired width
+            self.adjustments_animation.start()
+        except Exception as e:
+            print(f"Error toggling adjustments menu: {e}")
 
     def reset_image(self):
-        # Clear all image-related variables
-        self.image = None
-        self.original_image = None
-        self.checkpoints = []
+        try:
+            print("Resetting image...")
+            # Clear all image-related variables
+            self.image = None
+            self.original_image = None
+            self.checkpoints = []
 
-        # Reset active filters
-        self.active_filters = {
-            'gaussian': False,
-            'median': False,
-            'bilateral': False,
-            'box': False
-        }
+            # Reset active filters
+            self.active_filters = {key: False for key in self.active_filters}
 
-        # Reset filter buttons to unchecked state
-        for button in [self.gaussian_button, self.median_button, self.bilateral_button, self.box_button]:
-            button.setChecked(False)
+            # Reset adjustment tracking
+            self.previous_adjustments = {key: None for key in self.previous_adjustments}
 
-        # Reset slider to default value
-        self.blur_slider.setValue(5)
+            # Reset filter buttons to unchecked state
+            for button in [self.gaussian_button, self.median_button, self.bilateral_button, self.box_button]:
+                button.setChecked(False)
 
-        # Clear the image display
-        self.image_label.clear()
-        self.image_label.setText("No image loaded")
+            # Reset slider to default value
+            self.blur_slider.setValue(5)
+
+            # Clear the image display
+            self.image_label.clear()
+            self.image_label.setText("No image loaded")
+        except Exception as e:
+            print(f"Error resetting image: {e}")
 
     def toggle_menu(self):
-        if self.menu_open:
-            self.animation.setStartValue(200)
-            self.animation.setEndValue(0)
-            self.toggle_button.setText("☰")
-        else:
-            self.animation.setStartValue(0)
-            self.animation.setEndValue(200)
-            self.toggle_button.setText("×")
-        self.menu_open = not self.menu_open
-        self.animation.start()
+        try:
+            print("Toggling side menu...")
+            if self.menu_open:
+                self.animation.setStartValue(200)
+                self.animation.setEndValue(0)
+                self.toggle_button.setText("☰")
+            else:
+                self.animation.setStartValue(0)
+                self.animation.setEndValue(200)
+                self.toggle_button.setText("×")
+            self.menu_open = not self.menu_open
+            self.animation.start()
+        except Exception as e:
+            print(f"Error toggling menu: {e}")
 
     def load_image(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Open Image", "", "Image Files (*.png *.jpg *.bmp)")
-        if file_name:
-            self.image = cv2.imread(file_name)
-            self.original_image = self.image.copy()
-            self.checkpoints = [self.image.copy()]
-            self.show_image(self.image)
+        try:
+            print("Loading image...")
+            file_name, _ = QFileDialog.getOpenFileName(self, "Open Image", "", "Image Files (*.png *.jpg *.bmp)")
+            if file_name:
+                self.image = cv2.imread(file_name)
+                if self.image is None:
+                    raise ValueError("Failed to load image. Check the file format or path.")
+                self.original_image = self.image.copy()
+                self.checkpoints = [self.image.copy()]
+                print(f"Image loaded: {file_name}")
+                self.show_image(self.image)
+        except Exception as e:
+            print(f"Error loading image: {e}")
 
     def show_image(self, img):
-        height, width, channel = img.shape
-        bytes_per_line = 3 * width
-        q_img = QImage(img.data, width, height, bytes_per_line, QImage.Format_BGR888)
-        pixmap = QPixmap.fromImage(q_img)
-        self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        try:
+            print("Displaying image...")
+            height, width, channel = img.shape
+            bytes_per_line = 3 * width
+            q_img = QImage(img.data, width, height, bytes_per_line, QImage.Format_BGR888)
+            pixmap = QPixmap.fromImage(q_img)
+            self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        except Exception as e:
+            print(f"Error displaying image: {e}")
 
     def toggle_filter(self, filter_name, button):
-        # Toggle filter on/off
-        self.active_filters[filter_name] = not self.active_filters[filter_name]
-        button.setChecked(self.active_filters[filter_name])
-        self.apply_active_filters()
+        try:
+            print(f"Toggling filter: {filter_name}")
+            self.active_filters[filter_name] = not self.active_filters[filter_name]
+            button.setChecked(self.active_filters[filter_name])
+            self.apply_active_filters()
+        except Exception as e:
+            print(f"Error toggling filter {filter_name}: {e}")
 
     def apply_active_filters(self):
-        if self.image is not None:
-            current_image = self.original_image.copy()
-            intensity = self.blur_slider.value()
+        try:
+            print("Applying active filters...")
+            if self.image is not None:
+                current_image = self.original_image.copy()
+                intensity = self.blur_slider.value()
 
-            # Apply active filters in sequence
-            if self.active_filters['gaussian']:
-                current_image = apply_gaussian_blur(current_image, intensity)
-            if self.active_filters['median']:
-                current_image = apply_median_blur(current_image, intensity)
-            if self.active_filters['bilateral']:
-                current_image = apply_bilateral_blur(current_image, intensity)
-            if self.active_filters['box']:
-                current_image = apply_box_blur(current_image, intensity)
+                # Apply active blur filters
+                if self.active_filters['gaussian']:
+                    current_image = apply_gaussian_blur(current_image, intensity)
+                if self.active_filters['median']:
+                    current_image = apply_median_blur(current_image, intensity)
+                if self.active_filters['bilateral']:
+                    current_image = apply_bilateral_blur(current_image, intensity)
+                if self.active_filters['box']:
+                    current_image = apply_box_blur(current_image, intensity)
 
-            # Apply active filters in sequence
-            for adjustment, (slider, _) in self.adjustments_sliders.items():
-                value = slider.value()
-                if adjustment == "Temperature":
-                    current_image = adjust_temperature(current_image, value)
-                elif adjustment == "Tint":
-                    current_image = adjust_tint(current_image, value)
-                elif adjustment == "Exposure":
-                    current_image = adjust_exposure(current_image, value)
-                elif adjustment == "Contrast":
-                    current_image = adjust_contrast(current_image, value)
-                elif adjustment == "Highlights":
-                    current_image = adjust_highlights(current_image, value)
-                elif adjustment == "Shadows":
-                    current_image = adjust_shadows(current_image, value)
-                elif adjustment == "Clarity":
-                    current_image = adjust_clarity(current_image, value)
-                elif adjustment == "Saturation":
-                    current_image = adjust_saturation(current_image, value)
-                elif adjustment == "Sharpness":
-                    current_image = adjust_sharpness(current_image, value)
-                elif adjustment == "Noise":
-                    current_image = reduce_noise(current_image, value)
-                elif adjustment == "Moire" and value > 0:  # Only apply if the slider is > 0
-                    current_image = reduce_moire(current_image)
-                elif adjustment == "Defringe":
-                    current_image = defringe(current_image, value)
+                # Apply adjustments only if their value has changed
+                for adjustment, (slider, _) in self.adjustments_sliders.items():
+                    value = slider.value()
+                    previous_value = self.previous_adjustments[adjustment]
 
-            self.image = current_image
-            self.checkpoints.append(current_image.copy())
-            self.show_image(current_image)
+                    if value != previous_value:  # Only apply if value has changed
+                        print(f"Updating {adjustment} with new value: {value}")
+                        if adjustment == "Temperature":
+                            current_image = adjust_temperature(current_image, value)
+                        elif adjustment == "Tint":
+                            current_image = adjust_tint(current_image, value)
+                        elif adjustment == "Exposure":
+                            current_image = adjust_exposure(current_image, value)
+                        elif adjustment == "Contrast":
+                            current_image = adjust_contrast(current_image, value)
+                        elif adjustment == "Highlights":
+                            current_image = adjust_highlights(current_image, value)
+                        elif adjustment == "Shadows":
+                            current_image = adjust_shadows(current_image, value)
+                        elif adjustment == "Clarity":
+                            current_image = adjust_clarity(current_image, value)
+                        elif adjustment == "Saturation":
+                            current_image = adjust_saturation(current_image, value)
+                        elif adjustment == "Sharpness":
+                            current_image = adjust_sharpness(current_image, value)
+                        elif adjustment == "Noise":
+                            current_image = reduce_noise(current_image, value)
+                        elif adjustment == "Moire" and value > 0:
+                            current_image = reduce_moire(current_image)
+                        elif adjustment == "Defringe":
+                            current_image = defringe(current_image, value)
+
+                        # Update the previous value
+                        self.previous_adjustments[adjustment] = value
+
+                self.image = current_image
+                self.checkpoints.append(current_image.copy())
+                self.show_image(current_image)
+        except Exception as e:
+            print(f"Error applying filters: {e}")
 
     def update_adjustment(self, adjustment, value):
-        """Update the adjustment slider and reapply filters."""
-        slider, value_label = self.adjustments_sliders[adjustment]
-        value_label.setText(f"{value}")  # Update the displayed value
-        self.apply_active_filters()  # Reapply filters
+        try:
+            print(f"Updating adjustment: {adjustment} with value {value}")
+            slider, value_label = self.adjustments_sliders[adjustment]
+            value_label.setText(f"{value}")
+            self.apply_active_filters()
+        except Exception as e:
+            print(f"Error updating adjustment {adjustment}: {e}")
 
     def undo_last(self):
-        if len(self.checkpoints) > 1:
-            self.checkpoints.pop()  # Remove the current state
-            self.image = self.checkpoints[-1].copy()  # Revert to the previous state
-            self.show_image(self.image)
+        try:
+            print("Undoing last action...")
+            if len(self.checkpoints) > 1:
+                self.checkpoints.pop()  # Remove the current state
+                self.image = self.checkpoints[-1].copy()  # Revert to the previous state
+                self.show_image(self.image)
+            else:
+                print("No more actions to undo.")
+        except Exception as e:
+            print(f"Error undoing last action: {e}")
 
 
 # Main loop to run the application

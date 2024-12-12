@@ -247,27 +247,29 @@ class ImageFilterApp(QMainWindow):
     def reset_image(self):
         try:
             print("Resetting image...")
-            # Clear all image-related variables
-            self.image = None
-            self.original_image = None
-            self.checkpoints = []
+            if self.original_image is not None:
+                self.image = self.original_image.copy()
+                self.checkpoints = [self.image.copy()]
 
-            # Reset active filters
-            self.active_filters = {key: False for key in self.active_filters}
+                # Reset active filters
+                self.active_filters = {key: False for key in self.active_filters}
 
-            # Reset adjustment tracking
-            self.previous_adjustments = {key: None for key in self.previous_adjustments}
+                # Reset adjustment sliders
+                for adjustment, (slider, value_label) in self.adjustments_sliders.items():
+                    slider.setValue(0)
+                    value_label.setText("0")
 
-            # Reset filter buttons to unchecked state
-            for button in [self.gaussian_button, self.median_button, self.bilateral_button, self.box_button]:
-                button.setChecked(False)
+                # Reset filter buttons to unchecked state
+                for button in [self.gaussian_button, self.median_button, self.bilateral_button, self.box_button]:
+                    button.setChecked(False)
 
-            # Reset slider to default value
-            self.blur_slider.setValue(5)
+                # Clear previous adjustments tracking
+                self.previous_adjustments = {key: None for key in self.previous_adjustments}
 
-            # Clear the image display
-            self.image_label.clear()
-            self.image_label.setText("No image loaded")
+                # Show the original image
+                self.show_image(self.image)
+            else:
+                print("No image to reset.")
         except Exception as e:
             print(f"Error resetting image: {e}")
 
@@ -326,10 +328,11 @@ class ImageFilterApp(QMainWindow):
         try:
             print("Applying active filters...")
             if self.image is not None:
+                # Start with the original image to prevent accumulating changes
                 current_image = self.original_image.copy()
-                intensity = self.blur_slider.value()
 
                 # Apply active blur filters
+                intensity = self.blur_slider.value()
                 if self.active_filters['gaussian']:
                     current_image = apply_gaussian_blur(current_image, intensity)
                 if self.active_filters['median']:
@@ -339,13 +342,13 @@ class ImageFilterApp(QMainWindow):
                 if self.active_filters['box']:
                     current_image = apply_box_blur(current_image, intensity)
 
-                # Apply adjustments only if their value has changed
+                # Apply adjustments cumulatively based on the sliders' values
                 for adjustment, (slider, _) in self.adjustments_sliders.items():
                     value = slider.value()
-                    previous_value = self.previous_adjustments[adjustment]
 
-                    if value != previous_value:  # Only apply if value has changed
-                        print(f"Updating {adjustment} with new value: {value}")
+                    # Apply the corresponding adjustment
+                    if value != 0:  # Skip adjustments with zero values
+                        print(f"Applying {adjustment} with value: {value}")
                         if adjustment == "Temperature":
                             current_image = adjust_temperature(current_image, value)
                         elif adjustment == "Tint":
@@ -371,9 +374,7 @@ class ImageFilterApp(QMainWindow):
                         elif adjustment == "Defringe":
                             current_image = defringe(current_image, value)
 
-                        # Update the previous value
-                        self.previous_adjustments[adjustment] = value
-
+                # Update the displayed image
                 self.image = current_image
                 self.checkpoints.append(current_image.copy())
                 self.show_image(current_image)

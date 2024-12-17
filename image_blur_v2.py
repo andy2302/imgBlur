@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QFileDialog, QSlider, QFrame
+    QFileDialog, QSlider, QFrame, QScrollArea
 )
 from PySide6.QtCore import Qt, QPropertyAnimation
 from PySide6.QtGui import QPixmap, QImage
@@ -153,8 +153,14 @@ class ImageFilterApp(QMainWindow):
         self.adjustments_animation = QPropertyAnimation(self.adjustments_menu, b"minimumWidth")
         self.adjustments_animation.setDuration(300)
 
+        self.adjustments_scroll_area = QScrollArea()
+        self.adjustments_scroll_area.setWidgetResizable(True)
+        self.adjustments_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.adjustments_scroll_area.setStyleSheet("background-color: #555;")
+
+        adjustments_content = QWidget()
         adjustments_menu_layout = QVBoxLayout()
-        self.adjustments_menu.setLayout(adjustments_menu_layout)
+        adjustments_content.setLayout(adjustments_menu_layout)
 
         # Adjustments Sliders
         self.adjustments_sliders = {}
@@ -192,6 +198,14 @@ class ImageFilterApp(QMainWindow):
 
             # Store the slider and value label in a dictionary
             self.adjustments_sliders[name] = (slider, value_label)
+
+        # Set adjustments content into the scroll area
+        self.adjustments_scroll_area.setWidget(adjustments_content)
+
+        # Add the scroll area to the adjustments menu
+        adjustments_menu_layout_container = QVBoxLayout()
+        adjustments_menu_layout_container.addWidget(self.adjustments_scroll_area)
+        self.adjustments_menu.setLayout(adjustments_menu_layout_container)
 
         # Connect adjustments menu toggle
         adjustments_button.clicked.connect(self.toggle_adjustments_menu)
